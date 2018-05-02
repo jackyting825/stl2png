@@ -11,7 +11,10 @@ transform STL to png total takes 1515 millisecond
 ```
 ### 参数
 ```bash
-elvin@elvin-pc ~/workspace/stl2png/test_stl $ java -jar stl2png.jar -h
+use for example:
+
+java -jar stl2png.jar -s /home/bz/Desktop/test.stl -z 2 -d -V -S -t /home/bz/Desktop/test.png
+
 usage:
 	-s STL file path
 	-t target png file path
@@ -19,6 +22,8 @@ usage:
 	-v show details of transform
 	-V calculate volume and output it
 	-S calculate surface area and output it
+	-d calculate long, with, height and output it
+	-z scale number. such as zoom in two,set -z 2
 ```
 ### 运行环境
 java8、povray3.7、Linux。  

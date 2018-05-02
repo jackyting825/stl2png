@@ -19,6 +19,7 @@ public class Converter {
 
     /**
      * convert pov file to png file
+     *
      * @param povFilePath pov file path
      * @param pngFilePath png file path
      */
@@ -31,24 +32,24 @@ public class Converter {
             ProcessBuilder processBuilder = new ProcessBuilder("povray", params);
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
-            if (Program.getCommand().hasOption("v")){
+            if (Program.getCommand().hasOption("v")) {
                 br = new BufferedReader(
                         new InputStreamReader(process.getInputStream()));
 
                 String lineStr;
-                while (null != (lineStr = br.readLine())){
+                while (null != (lineStr = br.readLine())) {
                     System.out.println(lineStr);
                 }
             }
 
             if (process.waitFor() != 0) {
-                if (process.exitValue() == 1){
+                if (process.exitValue() == 1) {
                     System.out.println("com command execute failed");
                     System.out.println("cmd:povray" + params);
                 }
             }
         } finally {
-            if (br != null){
+            if (br != null) {
                 br.close();
             }
         }
@@ -57,14 +58,15 @@ public class Converter {
 
     /**
      * convert STL file to pov file
+     *
      * @param stlFilePath STL file path
      * @param povFilePath pov file path
      * @throws IOException when file access error
      */
     void stl2pov(String stlFilePath, String povFilePath
-            ) throws IOException {
+    ) throws IOException {
         File stlFile = new File(stlFilePath);
-        if (!stlFile.exists()){
+        if (!stlFile.exists()) {
             throw new IllegalArgumentException("specified STL file not found!");
         }
         POVFileGenerator povFileGenerator = new TemplateBasedPOVFileGenerator(povFilePath
@@ -85,61 +87,118 @@ public class Converter {
 
             //int lineNo = 0;
             Polygon polygon;
-            while(null != (polygon = stlReader.nextPolygon())){
+            while (null != (polygon = stlReader.nextPolygon())) {
                 povFileGenerator.addPolygon(polygon);
-                if (Program.getCommand().hasOption("S")){
-                    double ps = getPartialSurfaceArea(polygon);
-                    s += ps;
+                if (Program.getCommand().hasOption("S")) {
+                    if (Program.getCommand().hasOption("z")) {
+                        double ps = getPartialSurfaceArea(polygon,
+                                Integer.parseInt(Program.getCommand().getOptionValue("z")));
+                        s += ps;
+                    } else {
+                        double ps = getPartialSurfaceArea(polygon);
+                        s += ps;
+                    }
                     //lineNo++;
                     //System.out.println("lineNo:" + lineNo + " ps:" + ps + " s:" + s + " polygon:" + polygon);
                 }
-                if (Program.getCommand().hasOption("V")){
-                    v += getPartialVolume(polygon);
+                if (Program.getCommand().hasOption("V")) {
+                    if (Program.getCommand().hasOption("z")) {
+                        v += getPartialVolume(polygon, Integer.parseInt(Program.getCommand().getOptionValue("z")));
+                    } else {
+                        v += getPartialVolume(polygon);
+                    }
                 }
-                if (Program.getCommand().hasOption("d")){
+                if (Program.getCommand().hasOption("d")) {
                     Vertex[] vertices = polygon.getVertices();
-                    for(Vertex vertex : vertices){
-                        if (vertex.getX() < minX){
+                    for (Vertex vertex : vertices) {
+                        if (vertex.getX() < minX) {
                             minX = vertex.getX();
                         }
-                        if (vertex.getX() > maxX){
+                        if (vertex.getX() > maxX) {
                             maxX = vertex.getX();
                         }
-                        if (vertex.getY() < minY){
+                        if (vertex.getY() < minY) {
                             minY = vertex.getY();
                         }
-                        if (vertex.getY() > maxY){
+                        if (vertex.getY() > maxY) {
                             maxY = vertex.getY();
                         }
-                        if (vertex.getZ() < minZ){
+                        if (vertex.getZ() < minZ) {
                             minZ = vertex.getZ();
                         }
-                        if (vertex.getZ() > maxZ){
+                        if (vertex.getZ() > maxZ) {
                             maxZ = vertex.getZ();
                         }
                     }
                 }
             }
 
-            if (Program.getCommand().hasOption("S")){
+            if (Program.getCommand().hasOption("S")) {
                 System.out.println("surface area: " + s);
             }
-            if (Program.getCommand().hasOption("V")){
+            if (Program.getCommand().hasOption("V")) {
                 System.out.println("volume: " + v);
             }
-            if (Program.getCommand().hasOption("d")){
-                System.out.println("size: " + (maxX - minX) + ","
-                        + (maxY - minY) + "," + (maxZ - minZ));
+            if (Program.getCommand().hasOption("d")) {
+                if (Program.getCommand().hasOption("z")) {
+                    Integer zoom = Integer.parseInt(Program.getCommand().getOptionValue("z"));
+                    System.out.println("size: " + (maxX - minX) * zoom + ","
+                            + (maxY - minY) * zoom + "," + (maxZ - minZ) * zoom);
+                } else {
+                    System.out.println("size: " + (maxX - minX) + ","
+                            + (maxY - minY) + "," + (maxZ - minZ));
+                }
             }
         } finally {
-            if (stlReader != null){
+            if (stlReader != null) {
                 stlReader.close();
             }
             povFileGenerator.close();
         }
     }
 
-    private double getPartialVolume(Polygon polygon){
+    /**
+     * 计算在缩放为zoom倍数下的体积
+     *
+     * @param polygon
+     * @param zoom
+     * @return
+     */
+    private double getPartialVolume(Polygon polygon, int zoom) {
+        Vertex[] vertices = polygon.getVertices();
+        return (vertices[0].getX() * zoom * vertices[1].getY() * zoom * vertices[2].getZ() * zoom
+                + vertices[0].getY() * zoom * vertices[1].getZ() * zoom * vertices[2].getX() * zoom
+                + vertices[0].getZ() * zoom * vertices[1].getX() * zoom * vertices[2].getY() * zoom
+                - vertices[0].getX() * zoom * vertices[1].getZ() * zoom * vertices[2].getY() * zoom
+                - vertices[0].getZ() * zoom * vertices[1].getY() * zoom * vertices[2].getX() * zoom
+                - vertices[0].getY() * zoom * vertices[1].getX() * zoom * vertices[2].getZ() * zoom) / 6;
+    }
+
+    /**
+     * 计算在缩放为zoom倍数下的表面积
+     *
+     * @param polygon
+     * @param zoom
+     * @return
+     */
+    private double getPartialSurfaceArea(Polygon polygon, int zoom) {
+        Vertex[] vertices = polygon.getVertices();
+        double a, b, c;
+        a = Math.sqrt((Math.pow((vertices[0].getX() - vertices[1].getX()) * zoom, 2)
+                + Math.pow((vertices[0].getY() - vertices[1].getY()) * zoom, 2)
+                + Math.pow((vertices[0].getZ() - vertices[1].getZ()) * zoom, 2)));
+        b = Math.sqrt((Math.pow((vertices[0].getX() - vertices[2].getX()) * zoom, 2)
+                + Math.pow((vertices[0].getY() - vertices[2].getY()) * zoom, 2)
+                + Math.pow((vertices[0].getZ() - vertices[2].getZ()) * zoom, 2)));
+        c = Math.sqrt((Math.pow((vertices[2].getX() - vertices[1].getX()) * zoom, 2)
+                + Math.pow((vertices[2].getY() - vertices[1].getY()) * zoom, 2)
+                + Math.pow((vertices[2].getZ() - vertices[1].getZ()) * zoom, 2)));
+        double s = (a + b + c) / 2;
+        double ret = Math.sqrt(s * (s - a) * (s - b) * (s - c));
+        return Double.isNaN(ret) ? 0 : ret;
+    }
+
+    private double getPartialVolume(Polygon polygon) {
         Vertex[] vertices = polygon.getVertices();
         return (vertices[0].getX() * vertices[1].getY() * vertices[2].getZ()
                 + vertices[0].getY() * vertices[1].getZ() * vertices[2].getX()
@@ -150,7 +209,7 @@ public class Converter {
 
     }
 
-    private double getPartialSurfaceArea(Polygon polygon){
+    private double getPartialSurfaceArea(Polygon polygon) {
         Vertex[] vertices = polygon.getVertices();
         double a, b, c;
         a = Math.sqrt((Math.pow((vertices[0].getX() - vertices[1].getX()), 2)
@@ -163,7 +222,7 @@ public class Converter {
                 + Math.pow((vertices[2].getY() - vertices[1].getY()), 2)
                 + Math.pow((vertices[2].getZ() - vertices[1].getZ()), 2)));
         double s = (a + b + c) / 2;
-        double ret = Math.sqrt(s*(s - a)*(s - b)*(s - c));
+        double ret = Math.sqrt(s * (s - a) * (s - b) * (s - c));
         return Double.isNaN(ret) ? 0 : ret;
     }
 }

@@ -1,6 +1,7 @@
 package com.gelvt.stl2png;
 
 import org.apache.commons.cli.*;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -17,9 +18,10 @@ public class Program {
         return cmd;
     }
 
-    static{
+    static {
         options.addOption("s", true, "STL file path");
         options.addOption("t", true, "target png file path");
+        options.addOption("z", true, "scale multiple number");
         options.addOption("h", false, "help");
         options.addOption("v", false, "show details of transform");
         options.addOption("V", false, "calculate volume and output it");
@@ -27,7 +29,7 @@ public class Program {
         options.addOption("d", false, "calculate long, with, height and output it");
     }
 
-    private static String mkTempFile() throws IOException{
+    private static String mkTempFile() throws IOException {
         File temp = File.createTempFile("stl2png_", ".pov");
         temp.deleteOnExit();
         return temp.getAbsolutePath();
@@ -42,15 +44,21 @@ public class Program {
             return;
         }
 
-        if (!cmd.hasOption("s")){
+        if (!cmd.hasOption("s")) {
             printHelpInfo();
             return;
         }
-        if (!cmd.hasOption("t")){
+        if (!cmd.hasOption("t")) {
             printHelpInfo();
             return;
         }
-        if(cmd.hasOption("h")){
+        if (cmd.hasOption("z")) {
+            if (!cmd.getOptionValue("z").matches("^[0-9]*[1-9][0-9]*$")) {
+                System.out.println("zoom value must int");
+                return;
+            }
+        }
+        if (cmd.hasOption("h")) {
             printHelpInfo();
             return;
         }
@@ -76,10 +84,11 @@ public class Program {
         System.out.println("transform STL to png total takes " + (t3 - t1) + " millisecond");
     }
 
-    private static void printHelpInfo(){
+    private static void printHelpInfo() {
         System.out.println("usage:");
         System.out.println("\t-s STL file path");
         System.out.println("\t-t target png file path");
+        System.out.println("\t-z scale multiple number");
         System.out.println("\t-h help");
         System.out.println("\t-v show details of transform");
         System.out.println("\t-V calculate volume and output it");
